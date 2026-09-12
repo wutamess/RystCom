@@ -307,7 +307,7 @@
   <button id="howItWorksLink" onclick="openIntro()" title="Replay the intro walkthrough">📖 How it works</button>
 </div>
 <div id="cardsGeneratedStat" style="display:none; align-items:center; justify-content:center; gap:10px; margin:0 0 12px;">
-  <div id="cardsGeneratedDigits" style="display:flex; gap:4px; background:linear-gradient(160deg,#9a9ea1,#5c6063); padding:6px 7px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);"></div>
+  <div id="cardsGeneratedDigits" style="display:flex; gap:4px; background:linear-gradient(160deg,#c0392b,#7a1f16); padding:6px 7px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);"></div>
   <span style="font-family:'Barlow Condensed', sans-serif; font-weight:700; font-size:15px; text-transform:uppercase; letter-spacing:0.3px; color:var(--text);">Wrist Cards Generated</span>
 </div>
 <p class="help">
@@ -2156,7 +2156,7 @@ function showCardsGeneratedStat(count){
   const digitsEl = document.getElementById('cardsGeneratedDigits');
   if (!container || !digitsEl || !(count > 0)) return;
   digitsEl.innerHTML = String(count).split('').map(d =>
-    `<span style="display:inline-block; width:22px; height:32px; line-height:32px; text-align:center; background:#f4f4f2; color:#c0392b; font-weight:800; font-size:20px; font-family:'Courier New', monospace; border-radius:4px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.6);">${d}</span>`
+    `<span style="display:inline-block; width:22px; height:32px; line-height:32px; text-align:center; background:#f4f4f2; color:#1c1c1c; font-weight:800; font-size:20px; font-family:'Courier New', monospace; border-radius:4px; box-shadow:inset 0 2px 4px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.6);">${d}</span>`
   ).join('');
   container.style.display = 'inline-flex'; // inline so the parent's text-align:center actually centers it
 }
