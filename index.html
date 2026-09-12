@@ -333,9 +333,9 @@
     <p style="font-weight:600; font-size:13px; margin:0 0 6px; font-family:'Barlow Condensed', sans-serif; text-transform:uppercase; letter-spacing:0.3px; color:var(--help);">Quick Setup — random-fill a whole grid at once</p>
     <div class="row">Default minimum per code: <input type="number" id="minCount" value="2" min="1"></div>
     <p class="help" style="margin:2px 0 8px;">Used for any code below that doesn't have its own number. Example: with this set to 2, typing "FLO:5, CLO, DLI" gives you 5 FLO, and at least 2 each of CLO and DLI.</p>
-    <div class="row">Defense codes: <input type="text" id="defList" size="34" placeholder="FLO:5, CLO:3, DLO, DLI, DCLO, DCLI"> <button class="mini" onclick="loadCurrentCodes('defTable','defList')">Use Current</button> <button class="mini" onclick="randomFill('defTable', 'defList')">Random Fill Defense</button></div>
-    <div class="row">Offense codes: <input type="text" id="offList" size="34" placeholder="TK:4, FBT, S, B, BUNT, DS, SL"> <button class="mini" onclick="loadCurrentCodes('offTable','offList')">Use Current</button> <button class="mini" onclick="randomFill('offTable', 'offList')">Random Fill Offense</button></div>
-    <p class="help" style="margin:6px 0 18px;">"Use Current" fills the box with whatever codes are already on that grid. Random Fill replaces every cell on that grid — it doesn't just add to what's there.</p>
+    <div class="row">Defense codes: <input type="text" id="defList" size="34" placeholder="FLO:5, CLO:3, DLO, DLI, DCLO, DCLI"> <button class="mini" onclick="loadCurrentCodes('defTable','defList')">Use Current</button> <button class="mini" onclick="randomFill('defTable', 'defList')">Random Fill Defense</button> <button class="mini" onclick="clearCellColors('defTable')">Clear Colors</button></div>
+    <div class="row">Offense codes: <input type="text" id="offList" size="34" placeholder="TK:4, FBT, S, B, BUNT, DS, SL"> <button class="mini" onclick="loadCurrentCodes('offTable','offList')">Use Current</button> <button class="mini" onclick="randomFill('offTable', 'offList')">Random Fill Offense</button> <button class="mini" onclick="clearCellColors('offTable')">Clear Colors</button></div>
+    <p class="help" style="margin:6px 0 18px;">"Use Current" fills the box with whatever codes are already on that grid. Random Fill replaces every cell on that grid — it doesn't just add to what's there. If a code already has a color somewhere on the card, Random Fill keeps that same color with it wherever it lands. "Clear Colors" removes all color from that grid without touching the text.</p>
 
     <p style="font-weight:600; font-size:13px; margin:0 0 6px; font-family:'Barlow Condensed', sans-serif; text-transform:uppercase; letter-spacing:0.3px; color:var(--help);">Fine-Tune — adjust one code at a time</p>
     <div class="row" style="align-items:flex-start; gap:16px;">
@@ -1811,6 +1811,19 @@ function randomFill(tableId, listInputId){
   const entries = parseCodeList(raw, blanketMin);
   if (entries.length === 0) { alert('Enter at least one code first.'); return; }
 
+  // capture each code's current color (if any) before scrambling, so the same code keeps the same color afterward
+  const codeColorMap = {};
+  for (let r = 1; r < table.rows.length; r++){
+    for (let c = 1; c < table.rows[r].cells.length; c++){
+      const cell = table.rows[r].cells[c];
+      const code = cell.textContent.trim();
+      if (code && !codeColorMap[code]) {
+        const colorName = getCellColorName(cell);
+        if (colorName) codeColorMap[code] = colorName;
+      }
+    }
+  }
+
   const dataCells = [];
   for (let r = 1; r < table.rows.length; r++){
     for (let c = 1; c < table.rows[r].cells.length; c++){
@@ -1834,14 +1847,24 @@ function randomFill(tableId, listInputId){
   shuffle(pool);
 
   dataCells.forEach((cell, i) => {
-    cell.textContent = pool[i];
-    cell.classList.remove('c-yellow', 'c-red', 'c-green');
-    cell.style.backgroundColor = '';
-    cell.style.color = '';
+    const code = pool[i];
+    cell.textContent = code;
     cell.style.fontWeight = 'normal';
+    applyCellColor(cell, codeColorMap[code] || null); // reapply that code's established color, or leave uncolored if it never had one
   });
 
   warnIfNoNamesYet();
+}
+
+function clearCellColors(tableId){
+  const table = document.getElementById(tableId);
+  if (!table) { alert('That grid does not exist on this card.'); return; }
+  pushUndo();
+  for (let r = 1; r < table.rows.length; r++){
+    for (let c = 1; c < table.rows[r].cells.length; c++){
+      applyCellColor(table.rows[r].cells[c], null);
+    }
+  }
 }
 
 function wipeCard(){
