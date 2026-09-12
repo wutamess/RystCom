@@ -211,8 +211,6 @@
 
   #printBtn {
     background:linear-gradient(180deg, var(--accent), var(--accent-dark)); color:#fff;
-    border-radius:12px; padding:13px 26px; font-size:15px;
-    box-shadow:0 4px 12px rgba(47,111,78,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
   }
   #printBtn:hover { filter:brightness(1.08); }
   #wipeBtn {
@@ -318,16 +316,6 @@
 
 <div id="appLayout">
 <div id="controlsPanel">
-
-<div class="row" style="margin-bottom:16px;">
-  <button class="mini" onclick="openWizard()">New Card</button>
-  <label class="mini file-btn">Import<input type="file" accept=".html" onchange="importCard(event)" style="display:none;"></label>
-  <button class="mini" onclick="quickSave()">💾 Save</button>
-  <button class="mini" onclick="saveAsPrompt()">Save As...</button>
-  <button class="mini" onclick="duplicateCard()">Duplicate</button>
-  <button class="mini" id="wipeBtn" onclick="wipeCard()">Wipe Card Clean</button>
-</div>
-<p class="help" style="margin:-10px 0 16px;">Save/Save As reopen the exact same file next time in Chrome or Edge. In Safari or Firefox, they always download a new copy instead — same content, just no "reuse this file" behavior.</p>
 
 <div class="mgr-card sortable-card" id="editGridCard" style="margin-bottom:16px;">
   <div class="mgr-header" onclick="toggleMgrCard(this)"><span class="drag-handle" title="Drag to reorder">⠿</span><span class="chevron">▾</span> Edit Grid <span style="font-weight:400; opacity:0.7; font-size:11px; margin-left:6px;">(quick fill, fine-tune, structure)</span></div>
@@ -530,12 +518,25 @@
 </div>
 
 <div id="previewPanel">
-<div class="row" style="margin-bottom:8px;">
-  <button id="printBtn" onclick="doPrint()">🖨️ Print / Save as PDF</button>
+<div class="row" style="margin-bottom:4px;">
+  <button class="mini" onclick="quickSave()">💾 Save</button>
+  <button class="mini" id="printBtn" onclick="doPrint()">🖨️ Print / Save as PDF</button>
   <button class="mini" onclick="undo()" title="Undo the last change, from anywhere (Ctrl/Cmd+Z)">↩ Undo</button>
   <button class="mini" onclick="redo()" title="Redo (Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z)">↪ Redo</button>
+  <span style="position:relative; display:inline-block;">
+    <button class="mini" onclick="toggleActionsMenu()">Actions ▾</button>
+    <div id="actionsMenu" style="display:none; position:absolute; top:100%; left:0; margin-top:4px; z-index:150; background:var(--panel); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.3); padding:4px; min-width:170px;">
+      <div class="ctx-item" onclick="closeActionsMenu(); openWizard();">New Card</div>
+      <label class="ctx-item" style="display:block; cursor:pointer;">Import<input type="file" accept=".html" onchange="closeActionsMenu(); importCard(event);" style="display:none;"></label>
+      <div class="ctx-item" onclick="closeActionsMenu(); saveAsPrompt();">Save As...</div>
+      <div class="ctx-item" onclick="closeActionsMenu(); duplicateCard();">Duplicate</div>
+      <div class="ctx-sep"></div>
+      <div class="ctx-item ctx-danger" onclick="closeActionsMenu(); wipeCard();">Wipe Card Clean</div>
+    </div>
+  </span>
   <button class="mini" id="supportBtnPrint" onclick="openSupportModal()">♥ Support</button>
 </div>
+<p class="help" style="margin:0 0 8px;">Save/Save As reopen the exact same file next time in Chrome or Edge. In Safari or Firefox, they always download a new copy instead — same content, just no "reuse this file" behavior.</p>
 <p style="font-size:12px; color:var(--help); text-align:center; margin:0 0 8px;">💡 Right-click any cell for more options — bold, underline, font size, colors, insert/delete rows &amp; columns, copy/paste</p>
 <div id="master"><div class="card"></div></div>
 </div>
@@ -2160,6 +2161,21 @@ function showCardsGeneratedStat(count){
   ).join('');
   container.style.display = 'inline-flex'; // inline so the parent's text-align:center actually centers it
 }
+
+// ---- Actions dropdown (New Card / Import / Save As / Duplicate / Wipe) ----
+function toggleActionsMenu(){
+  const menu = document.getElementById('actionsMenu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+function closeActionsMenu(){
+  document.getElementById('actionsMenu').style.display = 'none';
+}
+document.addEventListener('click', function(e){
+  const menu = document.getElementById('actionsMenu');
+  if (menu && menu.style.display === 'block' && !menu.contains(e.target) && e.target.textContent !== 'Actions ▾') {
+    menu.style.display = 'none';
+  }
+});
 
 async function doPrint(){
   selectedCells.forEach(c => c.classList.remove('selected'));
