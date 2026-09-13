@@ -2177,7 +2177,7 @@ async function quickSave(){
 // the stat just stays hidden instead of breaking anything.
 async function incrementCardsGeneratedCounter(){
   try {
-    const res = await fetch('/.netlify/functions/increment-card-count', { method: 'POST' });
+    const res = await fetch('/increment-card-count', { method: 'POST' });
     if (!res.ok) return;
     const data = await res.json();
     showCardsGeneratedStat(data.count);
@@ -2185,7 +2185,7 @@ async function incrementCardsGeneratedCounter(){
 }
 async function loadCardsGeneratedStat(){
   try {
-    const res = await fetch('/.netlify/functions/get-card-count');
+    const res = await fetch('/get-card-count');
     if (!res.ok) return;
     const data = await res.json();
     showCardsGeneratedStat(data.count);
