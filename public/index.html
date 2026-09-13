@@ -244,9 +244,10 @@
   }
   #printSheet { display:none; }
   @media print {
-    body * { visibility: hidden; }
+    body { min-height:0 !important; padding:0 !important; margin:0 !important; }
+    body > *:not(#printSheet) { display: none !important; } /* actually removes the rest of the app from layout, instead of just hiding it, so its height doesn't create blank extra pages */
     #printSheet, #printSheet * { visibility: visible; }
-    #printSheet { display:block; position:absolute; top:0; left:0; background:#fff; }
+    #printSheet { display:block; position:static; background:#fff; }
     #printSheet .card { padding:0; background:#fff; box-shadow:none; border-radius:0; margin:0; }
     #printSheet * {
       -webkit-print-color-adjust: exact !important;
