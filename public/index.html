@@ -2220,7 +2220,18 @@ async function doPrint(){
   selectedCells.forEach(c => c.classList.remove('selected'));
   await incrementCardsGeneratedCounter(); // must finish before window.print() freezes JS execution
   const cardEl = document.querySelector('#master .card');
-  const rectIn = { w: cardEl.offsetWidth / 96, h: cardEl.offsetHeight / 96 }; // CSS "in" = 96px, reliable regardless of screen DPI
+  // .card is display:flex, which makes it a block-level container that stretches to
+  // fill its parent's width on screen — NOT the actual content width of the tables
+  // inside it. Measure the real content bounds (left edge of the first child to the
+  // right edge of the last) instead of the container's own (misleadingly wide) box.
+  const cardChildren = [...cardEl.children];
+  let contentWidthPx = cardEl.offsetWidth;
+  if (cardChildren.length) {
+    const left = Math.min(...cardChildren.map(c => c.getBoundingClientRect().left));
+    const right = Math.max(...cardChildren.map(c => c.getBoundingClientRect().right));
+    contentWidthPx = right - left;
+  }
+  const rectIn = { w: contentWidthPx / 96, h: cardEl.offsetHeight / 96 }; // CSS "in" = 96px, reliable regardless of screen DPI
 
   const marginIn = 0.25; // printer-safe margin on every edge
   const gapIn = 0.1;     // small gap between cards so a cutting line is visible
