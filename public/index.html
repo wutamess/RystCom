@@ -720,6 +720,16 @@ document.getElementById('master').addEventListener('focusin', function(e){
   if (e.target.hasAttribute && e.target.hasAttribute('contenteditable')) pushUndo();
 });
 
+// clear cell selection when clicking away from the grid — but never on clicks to
+// toolbar/menu controls, since those need the selection to still be active to act on it
+document.addEventListener('click', function(e){
+  if (selectedCells.size === 0) return;
+  if (e.target.closest('#master')) return;
+  if (e.target.closest('button, input, select, textarea, label, #cellContextMenu, #actionsMenu')) return;
+  selectedCells.forEach(c => c.classList.remove('selected'));
+  selectedCells = new Set();
+});
+
 function placeCaretAtEnd(el){
   el.focus();
   const range = document.createRange();
