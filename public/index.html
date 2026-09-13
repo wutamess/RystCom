@@ -2222,7 +2222,7 @@ async function doPrint(){
   const cardEl = document.querySelector('#master .card');
   const rectIn = { w: cardEl.offsetWidth / 96, h: cardEl.offsetHeight / 96 }; // CSS "in" = 96px, reliable regardless of screen DPI
 
-  const marginIn = 0.05; // near-zero; actual printable edge is limited by the printer's own hardware margin, not this value
+  const marginIn = 0.25; // printer-safe margin on every edge
   const gapIn = 0.1;     // small gap between cards so a cutting line is visible
   const pageW = 11 - marginIn * 2;   // landscape letter
   const pageH = 8.5 - marginIn * 2;
