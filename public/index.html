@@ -573,6 +573,7 @@ function pushUndo(){
   if (undoStack.length > 50) undoStack.shift();
   redoStack = []; // any new change invalidates the redo history
   hasUnsavedChanges = true;
+  scheduleAutosave();
 }
 function undo(){
   if (undoStack.length === 0) { alert('Nothing to undo.'); return; }
@@ -1930,6 +1931,104 @@ function openRecentDB(){
     req.onerror = () => reject(req.error);
   });
 }
+// ---- autosave draft (IndexedDB — a single rolling snapshot of in-progress edits, separate
+// from any actual saved/imported file. Cleared whenever the card is saved or (re)imported,
+// since at that point there's a known-good baseline and nothing "unsaved" left to protect. ----
+function openAutosaveDB(){
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('IndexedDB not available')); return; }
+    const req = indexedDB.open('rystcomAutosave', 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore('drafts', { keyPath: 'id' }); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+let autosaveTimer = null;
+function scheduleAutosave(){
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(saveAutosaveDraft, 2500);
+}
+async function saveAutosaveDraft(){
+  try {
+    const db = await openAutosaveDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('drafts', 'readwrite');
+      tx.objectStore('drafts').put({ id: 'current', html: buildExportHtml(), timestamp: Date.now() });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(err) { /* best-effort — autosave just won't record this change */ }
+}
+async function getAutosaveDraft(){
+  try {
+    const db = await openAutosaveDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction('drafts', 'readonly');
+      const req = tx.objectStore('drafts').get('current');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch(err) { return null; }
+}
+async function clearAutosaveDraft(){
+  try {
+    const db = await openAutosaveDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('drafts', 'readwrite');
+      tx.objectStore('drafts').delete('current');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(err) { /* best-effort */ }
+}
+// Restores a draft without the Import confirmation dialog or undo-stack push — this is
+// recovering in-progress work, not replacing a deliberately loaded card. The draft stays
+// in IndexedDB afterward (not cleared) in case of another refresh before an explicit Save.
+function restoreAutosaveDraft(html){
+  let draftCard;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    draftCard = doc.querySelector('#master .card') || doc.querySelector('.card');
+  } catch(err) { draftCard = null; }
+  if (!draftCard) return false;
+  document.querySelector('#master .card').innerHTML = draftCard.innerHTML;
+  selectedCells = new Set();
+  lastCell = null;
+  cardBuilt = true;
+  const defsMatch = html.match(/window\.__CODE_DEFINITIONS__\s*=\s*(\{[^;]*\});/);
+  if (defsMatch) { try { codeDefinitions = JSON.parse(defsMatch[1]); } catch(err) {} }
+  const colorsMatch = html.match(/window\.__ACTIVE_COLORS__\s*=\s*(\[[^;]*\]);/);
+  if (colorsMatch) { try { activeColorNames = JSON.parse(colorsMatch[1]); } catch(err) {} }
+  const customPaletteMatch = html.match(/window\.__CUSTOM_PALETTE__\s*=\s*(\[[^;]*\]);/);
+  if (customPaletteMatch) {
+    try {
+      JSON.parse(customPaletteMatch[1]).forEach(entry => {
+        if (!PALETTE.find(p => p.name === entry.name)) PALETTE.push(entry);
+      });
+    } catch(err) {}
+  }
+  attachLiveObservers();
+  renderPalettePicker();
+  renderColorButtons();
+  renderCodeManager('defTable');
+  renderCodeManager('offTable');
+  hasUnsavedChanges = true; // restored content was never actually saved
+  undoStack = [];
+  redoStack = [];
+  return true;
+}
+async function checkForAutosaveDraft(){
+  const draft = await getAutosaveDraft();
+  if (!draft || !draft.html) return;
+  const when = new Date(draft.timestamp).toLocaleString();
+  if (confirm(`Found unsaved work from ${when} that wasn't saved before the page closed or refreshed.\n\nRestore it?`)) {
+    restoreAutosaveDraft(draft.html);
+  } else {
+    clearAutosaveDraft();
+  }
+}
+
 async function recordRecentCard(name, handle){
   try {
     const db = await openRecentDB();
@@ -2000,6 +2099,7 @@ function downloadFallback(filename){
   a.click();
   recordRecentCard(filename, null);
   hasUnsavedChanges = false;
+  clearAutosaveDraft();
 }
 
 async function writeToHandle(handle){
@@ -2008,6 +2108,7 @@ async function writeToHandle(handle){
   await writable.close();
   recordRecentCard(handle.name, handle);
   hasUnsavedChanges = false;
+  clearAutosaveDraft();
 }
 
 // "Save As" always opens a folder/location picker (Chrome/Edge). That location
@@ -2150,6 +2251,7 @@ function loadCardFromText(text){
   renderCodeManager('defTable');
   renderCodeManager('offTable');
   hasUnsavedChanges = false; // what's on screen now matches the file just loaded
+  clearAutosaveDraft();
   return true;
 }
 
@@ -2517,6 +2619,7 @@ loadCardsGeneratedStat();
 
 if (!window.__SAVED_STATE__) {
   buildFromWizard(); // builds a sensible default card; wizard stays closed unless the user opens it via New Card
+  checkForAutosaveDraft(); // offer to restore in-progress work from before a refresh/crash, if any exists
 } else {
   cardBuilt = true;
   attachLiveObservers();
